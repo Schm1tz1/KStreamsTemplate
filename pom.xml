@@ -18,6 +18,7 @@
         <maven.jar.version>3.5.1</maven.jar.version>
         <maven.assembly.version>3.8.0</maven.assembly.version>
         <maven.surefire.version>3.5.6</maven.surefire.version>
+        <fmt-maven-plugin.version>2.27</fmt-maven-plugin.version>
         <confluent.version>7.9.9</confluent.version>
         <kafka.version>7.9.9-ccs</kafka.version>
         <slf4j.version>1.7.36</slf4j.version>
@@ -39,6 +40,19 @@
     <build>
         <plugins>
             <plugin>
+                <groupId>com.spotify.fmt</groupId>
+                <artifactId>fmt-maven-plugin</artifactId>
+                <version>${fmt-maven-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <phase>process-sources</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>${maven.jar.version}</version>
@@ -57,8 +71,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${maven.compiler.version}</version>
                 <configuration>
-                    <source>${java.version}</source>
-                    <target>${java.version}</target>
+                    <release>${java.version}</release>
                     <encoding>UTF-8</encoding>
                 </configuration>
             </plugin>
@@ -185,7 +198,7 @@
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
+            <artifactId>slf4j-reload4j</artifactId>
             <version>${slf4j.version}</version>
         </dependency>
         <dependency>
