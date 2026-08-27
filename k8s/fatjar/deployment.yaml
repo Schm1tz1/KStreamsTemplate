@@ -1,0 +1,85 @@
+# Phase 2 of the no-registry-push flow (see ../README.md): runs the fat jar already
+# sitting on the kstreams-fatjar PVC using a stock JDK image, instead of the
+# custom-built image used in ../app. Applied by load-and-run.sh once the jar upload
+# has completed.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kstreams-fatjar
+  labels:
+    app.kubernetes.io/name: kstreams-template
+    app.kubernetes.io/instance: kstreams-fatjar
+    app.kubernetes.io/part-of: kstreams-template
+    app.kubernetes.io/component: stream-processor
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kstreams-template
+      app.kubernetes.io/instance: kstreams-fatjar
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: kstreams-template
+        app.kubernetes.io/instance: kstreams-fatjar
+        app.kubernetes.io/part-of: kstreams-template
+        app.kubernetes.io/component: stream-processor
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      # Kafka Streams needs time to commit offsets and close state stores cleanly on
+      # SIGTERM (handled by the app's own shutdown hook) before the pod is killed.
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: kstreams-template
+          image: eclipse-temurin:17-jre-alpine
+          imagePullPolicy: IfNotPresent
+          command: ["java"]
+          args:
+            - -Xms64m
+            - -Xmx256m
+            - -jar
+            - /app/fatjar/app.jar
+            - -c
+            - /app/config/kstreams.properties
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 250m
+              memory: 320Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          volumeMounts:
+            - name: fatjar
+              mountPath: /app/fatjar
+              readOnly: true
+            - name: kstreams-config
+              mountPath: /app/config/kstreams.properties
+              subPath: kstreams.properties
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: fatjar
+          persistentVolumeClaim:
+            claimName: kstreams-fatjar
+            readOnly: true
+        - name: kstreams-config
+          secret:
+            # kubectl create secret generic kstreams-config \
+            #   --from-file=kstreams.properties=../../examples/streams_ccloud.properties
+            secretName: kstreams-config
+        - name: tmp
+          emptyDir: {}

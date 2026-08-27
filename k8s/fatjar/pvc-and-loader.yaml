@@ -1,0 +1,55 @@
+# Phase 1 of the no-registry-push flow (see ../README.md): a PVC to hold the fat jar,
+# and a short-lived Pod that only exists so `kubectl cp` has something to copy into.
+# Applied and torn down by load-and-run.sh - not meant to be left running.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: kstreams-fatjar
+  labels:
+    app.kubernetes.io/name: kstreams-template
+    app.kubernetes.io/instance: kstreams-fatjar
+    app.kubernetes.io/part-of: kstreams-template
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      # the assembled fat jar is roughly 100Mi; sized with headroom
+      storage: 256Mi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kstreams-fatjar-loader
+  labels:
+    app.kubernetes.io/name: kstreams-template
+    app.kubernetes.io/instance: kstreams-fatjar
+    app.kubernetes.io/part-of: kstreams-template
+    app.kubernetes.io/component: fatjar-loader
+spec:
+  restartPolicy: Never
+  # Nothing else should schedule onto the same jar; this pod is deleted by the script
+  # as soon as the copy is done, freeing the PVC for the Deployment pod.
+  activeDeadlineSeconds: 600
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+    - name: loader
+      image: eclipse-temurin:17-jre-alpine
+      command: ["sleep", "600"]
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: ["ALL"]
+      volumeMounts:
+        - name: fatjar
+          mountPath: /data
+  volumes:
+    - name: fatjar
+      persistentVolumeClaim:
+        claimName: kstreams-fatjar

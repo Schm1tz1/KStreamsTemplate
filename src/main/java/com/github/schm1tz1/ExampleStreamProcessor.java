@@ -6,21 +6,11 @@ import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
 
 public class ExampleStreamProcessor implements Processor<String, String, String, String> {
-    private Boolean jsonFilterActionDrop;
     private ProcessorContext<String, String> context;
-    private String jsonFilterField;
-    private String jsonFilterValue;
-    private Sensor sensorFiltered;
     private Sensor sensorIn;
     private Sensor sensorOut;
 
-
-    /**
-     *
-     */
-    public ExampleStreamProcessor()
-    {
-
+    public ExampleStreamProcessor() {
     }
 
     /**
@@ -51,17 +41,15 @@ public class ExampleStreamProcessor implements Processor<String, String, String,
     }
 
     /**
-     * @param record the record to process, will be forwarded/dropped if it matches the pattern depending on the configuration
+     * @param record the record to process
      */
     @Override
     public void process(Record<String, String> record) {
         sensorIn.record();
+        context.forward(record);
         sensorOut.record();
     }
 
-    /**
-     *
-     */
     @Override
     public void close() {
         Processor.super.close();

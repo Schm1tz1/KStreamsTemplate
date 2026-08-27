@@ -1,4 +1,4 @@
-# Template KStreams Filter App
+# Template KStreams Processor App
 
 ## Processing Logic
 ...

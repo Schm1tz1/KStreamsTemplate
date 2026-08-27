@@ -20,12 +20,12 @@ public class StreamsPipeline {
     final Properties streamsProperties;
 
     /**
-     * Constructor to create App with properties
+     * Creates a StreamsPipeline with the given properties
      *
      * @param streamsProperties Properties for the Kafka Streams application
      */
     public StreamsPipeline(Properties streamsProperties) {
-        logger.debug("Starting EventFilterPipeline additional properties");
+        logger.debug("Initializing StreamsPipeline");
         this.streamsProperties = streamsProperties;
     }
 

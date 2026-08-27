@@ -1,0 +1,137 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kstreams-template
+  labels:
+    app.kubernetes.io/name: kstreams-template
+    app.kubernetes.io/instance: kstreams-app
+    app.kubernetes.io/part-of: kstreams-template
+automountServiceAccountToken: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kstreams-template
+  labels:
+    app.kubernetes.io/name: kstreams-template
+    app.kubernetes.io/instance: kstreams-app
+    app.kubernetes.io/part-of: kstreams-template
+    app.kubernetes.io/component: stream-processor
+spec:
+  # Kafka Streams instances of the same application.id form a consumer group, so this
+  # can be scaled horizontally up to the input topic's partition count without any
+  # other changes here.
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kstreams-template
+      app.kubernetes.io/instance: kstreams-app
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: kstreams-template
+        app.kubernetes.io/instance: kstreams-app
+        app.kubernetes.io/part-of: kstreams-template
+        app.kubernetes.io/component: stream-processor
+    spec:
+      serviceAccountName: kstreams-template
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      # Kafka Streams needs time to commit offsets and close state stores cleanly on
+      # SIGTERM (handled by the app's own shutdown hook) before the pod is killed.
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: kstreams-template
+          # Build & push with: mvn package docker:build (see pom.xml docker-maven-plugin),
+          # then point this at an image reference your cluster can actually pull.
+          image: schmitzi/kstreams-template:0.1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: metrics
+              containerPort: 1234
+              protocol: TCP
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 250m
+              memory: 320Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          # run_application.sh starts the JVM with -Xmx256m; the JMX Prometheus javaagent
+          # opens its HTTP server before the app's main() runs, so it doubles as a cheap
+          # liveness/readiness signal without needing an app-specific health endpoint.
+          startupProbe:
+            httpGet:
+              path: /
+              port: metrics
+            failureThreshold: 30
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: metrics
+            periodSeconds: 15
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: metrics
+            periodSeconds: 10
+            failureThreshold: 3
+          volumeMounts:
+            # Overlays only kstreams.properties inside the image's /app/config, so the
+            # baked-in jmx_exporter_kafka_streams.yml next to it stays intact.
+            - name: kstreams-config
+              mountPath: /app/config/kstreams.properties
+              subPath: kstreams.properties
+              readOnly: true
+            # readOnlyRootFilesystem needs a writable /tmp for JVM scratch files
+            # (e.g. hsperfdata).
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: kstreams-config
+          secret:
+            # Create with, e.g.:
+            #   kubectl create secret generic kstreams-config \
+            #     --from-file=kstreams.properties=./examples/streams_ccloud.properties
+            secretName: kstreams-config
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kstreams-template-metrics
+  labels:
+    app.kubernetes.io/name: kstreams-template
+    app.kubernetes.io/instance: kstreams-app
+    app.kubernetes.io/part-of: kstreams-template
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "1234"
+    prometheus.io/path: "/"
+spec:
+  # The app is a Kafka consumer/producer, not a request-serving service - this Service
+  # only exists so Prometheus (or a ServiceMonitor, if using prometheus-operator) has a
+  # stable target to scrape the JMX exporter on.
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: kstreams-template
+    app.kubernetes.io/instance: kstreams-app
+  ports:
+    - name: metrics
+      port: 1234
+      targetPort: metrics

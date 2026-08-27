@@ -6,14 +6,13 @@ import picocli.CommandLine;
 
 import java.util.Properties;
 
+/**
+ * Runnable app that adds command line parsing and handling
+ */
 @CommandLine.Command(name = "KStreamsTemplate",
         version = "KStreamsTemplate 0.1",
         description = "Kafka Streams template app.",
         mixinStandardHelpOptions = true)
-
-/**
- * Runnable Filtering App that adds command line parsing and handling
- */
 public class KStreamsTemplateApp implements Runnable {
     final static Logger logger = LoggerFactory.getLogger(KStreamsTemplateApp.class);
     @CommandLine.Option(names = {"-c", "--config-file"},
@@ -40,7 +39,7 @@ public class KStreamsTemplateApp implements Runnable {
         if(monitoringInterceptors) {
             PipelineConfigTools.addMonitoringInterceptorConfig(streamProperties);
         }
-        StreamsPipeline eventFilterPipeline = new StreamsPipeline(streamProperties);
-        eventFilterPipeline.run();
+        StreamsPipeline streamsPipeline = new StreamsPipeline(streamProperties);
+        streamsPipeline.run();
     }
 }
