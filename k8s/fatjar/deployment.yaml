@@ -1,7 +1,7 @@
 # Phase 2 of the no-registry-push flow (see ../README.md): runs the fat jar already
-# sitting on the kstreams-fatjar PVC using a stock JDK image, instead of the
-# custom-built image used in ../app. Applied by load-and-run.sh once the jar upload
-# has completed.
+# sitting on the kstreams-fatjar PVC using a stock distroless Java image, instead of
+# the custom-built image used in ../app. Applied by load-and-run.sh once the jar
+# upload has completed.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -39,7 +39,8 @@ spec:
       terminationGracePeriodSeconds: 60
       containers:
         - name: kstreams-template
-          image: eclipse-temurin:17-jre-alpine
+          # image: gcr.io/distroless/java17-debian12:nonroot
+          image: eclipse-temurin:17-ubi9-minimal
           imagePullPolicy: IfNotPresent
           command: ["java"]
           args:
@@ -69,6 +70,9 @@ spec:
               mountPath: /app/config/kstreams.properties
               subPath: kstreams.properties
               readOnly: true
+            - name: tls-client
+              mountPath: /app/certs
+              readOnly: true
             - name: tmp
               mountPath: /tmp
       volumes:
@@ -81,5 +85,8 @@ spec:
             # kubectl create secret generic kstreams-config \
             #   --from-file=kstreams.properties=../../examples/streams_ccloud.properties
             secretName: kstreams-config
+        - name: tls-client
+          secret:
+            secretName: tls-client
         - name: tmp
           emptyDir: {}

@@ -22,7 +22,7 @@ or committing it to git.
    `../examples/`), or your own:
    ```bash
    kubectl create secret generic kstreams-config \
-     --from-file=kstreams.properties=../examples/streams_ccloud.properties
+     --from-file=kstreams.properties=../examples/streams_ccloud.properties --dry-run=client -o yaml | kubectl apply -f -   
    ```
 3. Apply the manifest:
    ```bash
@@ -31,14 +31,15 @@ or committing it to git.
 
 ## Deploy (no registry push — fat jar on a PV)
 
-For a test environment where you can't push a custom image (e.g. a locked-down
+For a test environment (e.g. https://github.com/Schm1tz1/confluent-kubernetes-playbook/tree/main/cp-rbac-oauth) where you can't push a custom image (e.g. a locked-down
 artifactory), `./fatjar` runs the app on a stock `eclipse-temurin:17-jre-alpine` image
 instead, with the fat jar supplied via a `PersistentVolumeClaim`:
 
 1. Create the config `Secret`, same as above:
    ```bash
    kubectl create secret generic kstreams-config \
-     --from-file=kstreams.properties=../examples/streams_ccloud.properties
+     --from-file=kstreams.properties=../examples/streams_oauth_cp_local.properties \
+     --dry-run=client -o yaml | kubectl apply -f - 
    ```
 2. Run the script — it builds the fat jar if needed (`mvn package`), creates the PVC
    and a short-lived loader pod, `kubectl cp`s the jar onto the PVC, deletes the loader
