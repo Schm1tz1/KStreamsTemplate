@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Project-local Maven settings override.
+
+  Any machine-wide ~/.m2/settings.xml often mirror central (and more) to internal
+  company repos and inject extra internal repositories via profiles.
+  This project should only resolve artifacts from
+  Maven Central and the repository declared in pom.xml
+  (https://packages.confluent.io/maven/), so this file intentionally defines
+  no mirrors and no active profiles, and is wired in via .mvn/maven.config
+  (-s .mvn/settings.xml) so it fully replaces the user settings for builds
+  run from this project.
+-->
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
+                              https://maven.apache.org/xsd/settings-1.0.0.xsd">
+</settings>
